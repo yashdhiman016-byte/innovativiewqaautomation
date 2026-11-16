@@ -1,0 +1,129 @@
+name: Daily Innovatiview QA report
+
+on:
+  schedule:
+    - cron: '0 9 * * *'
+      timezone: Asia/Kolkata
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: innovatiview-qa-pages
+  cancel-in-progress: false
+
+jobs:
+  test-report-and-email:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Run Selenium tests
+        id: tests
+        continue-on-error: true
+        env:
+          SITE_URL: ${{ vars.SITE_URL || 'https://www.innovatiview.com' }}
+        run: >-
+          mvn --batch-mode
+          -Dheadless=true
+          -DbaseUrl="$SITE_URL/contact"
+          -DsiteUrl="$SITE_URL"
+          test
+
+      - name: Validate email configuration
+        id: email_config
+        if: always()
+        env:
+          GMAIL_FROM: ${{ vars.GMAIL_FROM }}
+          GMAIL_TO: ${{ vars.GMAIL_TO }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+        run: |
+          missing=0
+          for name in GMAIL_FROM GMAIL_TO GMAIL_APP_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Required GitHub Actions setting is missing: $name"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Generate static Allure report and ZIP
+        id: report
+        if: always()
+        run: |
+          mvn --batch-mode io.qameta.allure:allure-maven:2.15.0:report
+          mkdir -p public
+          cp -R target/site/allure-maven-plugin/. public/
+          touch public/.nojekyll
+          (cd public && zip -qr ../allure-report.zip .)
+
+      - name: Upload downloadable Allure report
+        if: always() && steps.report.outcome == 'success'
+        uses: actions/upload-artifact@v7
+        with:
+          name: innovatiview-allure-report-${{ github.run_number }}
+          path: target/allure-report.zip
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Upload report for GitHub Pages
+        if: always() && steps.report.outcome == 'success'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: public
+
+      - name: Publish Allure report to GitHub Pages
+        id: deployment
+        if: always() && steps.report.outcome == 'success'
+        uses: actions/deploy-pages@v5
+
+      - name: Email pass/fail report
+        if: always() && steps.report.outcome == 'success' && steps.email_config.outcome == 'success'
+        uses: dawidd6/action-send-mail@v24
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ vars.GMAIL_FROM }}
+          password: ${{ secrets.GMAIL_APP_PASSWORD }}
+          from: Innovatiview QA <${{ vars.GMAIL_FROM }}>
+          to: ${{ vars.GMAIL_TO }}
+          subject: Innovatiview QA automation ${{ steps.tests.outcome }} report
+          body: |
+            Innovatiview QA automation result: ${{ steps.tests.outcome }}
+
+            The static Allure report was generated and attached to this email.
+            Live Allure report: ${{ steps.deployment.outputs.page_url }}
+
+            Open the CI run to view logs and download artifacts:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          attachments: target/allure-report.zip
+
+      - name: Mark workflow failed if tests failed
+        if: always() && steps.tests.outcome == 'failure'
+        run: exit 1
+
+      - name: Mark workflow failed if email configuration is missing
+        if: always() && steps.email_config.outcome == 'failure'
+        run: exit 1
