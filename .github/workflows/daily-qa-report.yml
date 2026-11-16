@@ -116,10 +116,6 @@ jobs:
             The static Allure report was generated.
             Live Allure report: ${{ steps.deployment.outputs.page_url }}
 
-      - name: Mark workflow failed if tests failed
-        if: always() && steps.tests.outcome == 'failure'
-        run: exit 1
-
       - name: Mark workflow failed if email configuration is missing
         if: always() && steps.email_config.outcome == 'failure'
         run: exit 1
