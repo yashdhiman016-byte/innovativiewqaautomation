@@ -113,7 +113,7 @@ jobs:
           body: |
             Innovatiview QA automation result
 
-            The static Allure report was generated.
+            Here is the automatically generated QA report.
             Live Allure report: ${{ steps.deployment.outputs.page_url }}
 
       - name: Mark workflow failed if email configuration is missing
