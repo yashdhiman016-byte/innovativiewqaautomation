@@ -113,12 +113,11 @@ jobs:
           body: |
             Innovatiview QA automation result: ${{ steps.tests.outcome }}
 
-            The static Allure report was generated and attached to this email.
+            The static Allure report was generated.
             Live Allure report: ${{ steps.deployment.outputs.page_url }}
 
-            Open the CI run to view logs and download artifacts:
+            Open the CI run to view logs and download the Allure report ZIP artifact:
             ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          attachments: target/allure-report.zip
 
       - name: Mark workflow failed if tests failed
         if: always() && steps.tests.outcome == 'failure'
