@@ -114,7 +114,8 @@ jobs:
             Innovatiview QA automation result
 
             Here is the automatically generated QA report.
-            if no live url is shown below this, please click on "..." to show trimmed content.
+
+            note: if no live url is shown below this, please click on "..." or "Show quoted text" to show trimmed content.
             Live Allure report: ${{ steps.deployment.outputs.page_url }}
 
       - name: Mark workflow failed if email configuration is missing
