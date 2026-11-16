@@ -109,15 +109,12 @@ jobs:
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
           from: Innovatiview QA <${{ secrets.GMAIL_FROM }}>
           to: ${{ secrets.GMAIL_TO }}
-          subject: Innovatiview QA automation ${{ steps.tests.outcome }} report
+          subject: Innovatiview QA automation report
           body: |
-            Innovatiview QA automation result: ${{ steps.tests.outcome }}
+            Innovatiview QA automation result
 
             The static Allure report was generated.
             Live Allure report: ${{ steps.deployment.outputs.page_url }}
-
-            Open the CI run to view logs and download the Allure report ZIP artifact:
-            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Mark workflow failed if tests failed
         if: always() && steps.tests.outcome == 'failure'
