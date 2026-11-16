@@ -24,14 +24,14 @@ The published report is accessible to anyone who can reach the Pages URL. Treat 
 2. In **Settings → Pages**, choose **GitHub Actions** as the build and deployment source.
 3. In **Settings → Secrets and variables → Actions**, add these repository settings:
 
-   **Repository secret**
+   **Repository secrets**
 
    - `GMAIL_APP_PASSWORD`: a Gmail App Password for the sender account. Do not use the regular Gmail password.
-
-   **Repository variables**
-
    - `GMAIL_FROM`: the sender Gmail address.
    - `GMAIL_TO`: the recipient address. Multiple recipients can be comma-separated.
+
+   **Optional repository variable**
+
    - `SITE_URL` (optional): site origin without a trailing slash. Defaults to `https://www.innovatiview.com`.
 
 4. Under **Settings → Actions → General → Workflow permissions**, allow read access to repository contents. The workflow declares its Pages deployment permissions itself.

@@ -55,8 +55,8 @@ jobs:
         id: email_config
         if: always()
         env:
-          GMAIL_FROM: ${{ vars.GMAIL_FROM }}
-          GMAIL_TO: ${{ vars.GMAIL_TO }}
+          GMAIL_FROM: ${{ secrets.GMAIL_FROM }}
+          GMAIL_TO: ${{ secrets.GMAIL_TO }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: |
           missing=0
@@ -76,7 +76,7 @@ jobs:
           mkdir -p public
           cp -R target/site/allure-maven-plugin/. public/
           touch public/.nojekyll
-          (cd public && zip -qr ../allure-report.zip .)
+          (cd public && zip -qr ../target/allure-report.zip .)
 
       - name: Upload downloadable Allure report
         if: always() && steps.report.outcome == 'success'
@@ -105,10 +105,10 @@ jobs:
           server_address: smtp.gmail.com
           server_port: 465
           secure: true
-          username: ${{ vars.GMAIL_FROM }}
+          username: ${{ secrets.GMAIL_FROM }}
           password: ${{ secrets.GMAIL_APP_PASSWORD }}
-          from: Innovatiview QA <${{ vars.GMAIL_FROM }}>
-          to: ${{ vars.GMAIL_TO }}
+          from: Innovatiview QA <${{ secrets.GMAIL_FROM }}>
+          to: ${{ secrets.GMAIL_TO }}
           subject: Innovatiview QA automation ${{ steps.tests.outcome }} report
           body: |
             Innovatiview QA automation result: ${{ steps.tests.outcome }}
