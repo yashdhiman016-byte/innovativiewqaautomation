@@ -34,6 +34,7 @@ import org.openqa.selenium.chrome.ChromeDriver;
 @Feature("Contact form validation")
 @DisplayName("Contact form validation")
 class ContactFormValidationTest {
+    // The test owns the browser; page actions are delegated to ContactPage (Page Object pattern).
     private WebDriver driver;
     private ContactPage contactPage;
 
@@ -46,6 +47,7 @@ class ContactFormValidationTest {
 
     @AfterEach
     void tearDown() {
+        // Always close Chrome so parameterized invocations do not leak browser processes.
         if (driver != null) driver.quit();
     }
 
@@ -61,6 +63,7 @@ class ContactFormValidationTest {
     }
 
     static Stream<Arguments> blankAndWhitespaceRequiredFields() {
+        // Each argument is one independent JUnit invocation: readable case label, field, input, expected message.
         return Stream.of(
                 Arguments.of("First Name is blank", "First Name", "", "Enter your first name"),
                 Arguments.of("First Name contains whitespace", "First Name", "     ", "Enter your first name"),
@@ -92,6 +95,7 @@ class ContactFormValidationTest {
     }
 
     static Stream<Arguments> malformedEmails() {
+        // Representative syntax failures exercise browser-level email constraints without duplicating test logic.
         return Stream.of("yash.example.com", "@example.com", "yash@", "yash@example",
                 "yash..dhiman@example.com", "yash dhiman@example.com", "yash@@example.com",
                 ".yash@example.com")
@@ -118,6 +122,7 @@ class ContactFormValidationTest {
     }
 
     static Stream<Arguments> invalidPhones() {
+        // Include length, non-numeric, all-zero, and unsupported country-prefix examples.
         return Stream.of("987654321", "98765432101", "98765ABCDE", "98@76#43210", "0000000000", "+999987654321")
                 .map(value -> Arguments.of("Reject invalid phone: " + value, value));
     }
@@ -138,6 +143,7 @@ class ContactFormValidationTest {
     }
 
     static Stream<Arguments> unruledTextInputs() {
+        // These values probe input handling; absent a documented rule, the test records behavior instead of inventing one.
         String script = "<script>alert(1)</script>";
         String longValue = "A".repeat(256);
         return Stream.of(
@@ -186,6 +192,7 @@ class ContactFormValidationTest {
     @DisplayName("Repeated invalid submissions retain required field errors")
     @Description("Repeated invalid submissions should continue to expose only the applicable required-field errors.")
     void repeatedInvalidSubmitKeepsRelevantErrors() {
+        // Re-submit the same invalid form to catch errors that disappear or accumulate after repeated interaction.
         for (int attempt = 1; attempt <= 3; attempt++) {
             contactPage.submit();
             List<String> errors = contactPage.getInlineErrors();
@@ -196,6 +203,7 @@ class ContactFormValidationTest {
     }
 
     private void fillValidRequiredFieldsExcept(String targetField) {
+        // Isolate a single field's behavior by satisfying the other required controls first.
         if (!targetField.equalsIgnoreCase("First Name")) contactPage.fillField("First Name", "Yash");
         if (!targetField.equalsIgnoreCase("Email")) contactPage.fillField("Email", "yash@example.com");
         if (!targetField.equalsIgnoreCase("Phone No.")) contactPage.fillField("Phone No.", "9876543210");
@@ -208,6 +216,7 @@ class ContactFormValidationTest {
     }
 
     private void attachEvidence(String caseName, List<String> errors, String browserValidationMessage) {
+        // Human-readable text plus a screenshot makes a CI failure diagnosable without rerunning locally.
         String reportText = "Case: " + caseName + "\n" +
                 (errors.isEmpty() ? "No site inline validation errors found." : String.join("\n", errors)) +
                 (browserValidationMessage.isBlank() ? "" : "\nBrowser validation message: " + browserValidationMessage);
@@ -224,6 +233,7 @@ class ContactFormValidationTest {
     private byte[] captureFormScreenshot(TakesScreenshot screenshotDriver) {
         if (driver instanceof ChromeDriver chromeDriver) {
             try {
+                // Chrome DevTools can capture just the whole form, including portions below the viewport.
                 Map<String, Object> formBounds = (Map<String, Object>) ((JavascriptExecutor) driver)
                         .executeScript("const r=document.querySelector('form.form-class').getBoundingClientRect();"
                                 + "return {x:r.left+window.scrollX,y:r.top+window.scrollY,width:r.width,height:r.height};");
@@ -237,7 +247,7 @@ class ContactFormValidationTest {
                         Map.of("format", "png", "captureBeyondViewport", true, "clip", clip));
                 return Base64.getDecoder().decode((String) screenshot.get("data"));
             } catch (RuntimeException ignored) {
-                // Fall back to the current viewport if full-page capture is unsupported.
+                // Fall back to Selenium's portable viewport screenshot if CDP clipping is unavailable.
             }
         }
         return screenshotDriver.getScreenshotAs(OutputType.BYTES);

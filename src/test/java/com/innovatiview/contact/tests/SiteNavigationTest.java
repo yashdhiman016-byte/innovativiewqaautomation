@@ -19,6 +19,7 @@ import org.openqa.selenium.WebDriver;
 @Feature("Site navigation")
 @DisplayName("Header, menu, footer, and social navigation")
 class SiteNavigationTest {
+    // A fresh browser per test keeps navigation state (cookies, open menus, tabs) isolated.
     private WebDriver driver;
     private SiteNavigationPage navigation;
 
@@ -31,6 +32,7 @@ class SiteNavigationTest {
 
     @AfterEach
     void tearDown() {
+        // Capture current-page diagnostics before quitting the session, even after an assertion failure.
         try {
             if (navigation != null) navigation.attachNavigationEvidence();
         } finally {
@@ -39,6 +41,7 @@ class SiteNavigationTest {
     }
 
     static Stream<Arguments> headerLinks() {
+        // Shared source keeps route coverage concise while JUnit reports each label/route as its own case.
         return Stream.of(
                 Arguments.of("About Us", "/about-us"),
                 Arguments.of("Press", "/press"),

@@ -28,6 +28,7 @@ public class SiteNavigationPage {
     public SiteNavigationPage(WebDriver driver) {
         this.driver = driver;
         this.wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+        // One configurable origin supports local/staging runs while keeping production as the default.
         this.siteRoot = System.getProperty("siteUrl", "https://www.innovatiview.com").replaceAll("/+$", "");
         this.expectedUrl = siteRoot + "/";
     }
@@ -59,6 +60,7 @@ public class SiteNavigationPage {
         expectedUrl = siteRoot + normalizePath(expectedPath);
         Allure.parameter("Expected full URL", expectedUrl);
         By link = By.xpath("//a[@href='" + expectedPath + "']");
+        // Responsive layouts may leave a hidden desktop copy of the same link in the DOM.
         WebElement visibleMenuLink = wait.until(d -> d.findElements(link).stream()
                 .filter(WebElement::isDisplayed)
                 .filter(element -> (Boolean) ((JavascriptExecutor) d).executeScript(
@@ -74,6 +76,7 @@ public class SiteNavigationPage {
     public void openMegaMenu(String menuName) {
         By menuLink = By.xpath("//nav//a[@href='#' and normalize-space(.)='" + menuName + "']");
         WebElement menu = wait.until(ExpectedConditions.visibilityOfElementLocated(menuLink));
+        // Hover then click accommodates menus that reveal a panel on hover but need a click to stay open.
         new Actions(driver).moveToElement(menu).click().perform();
         wait.until(d -> currentPath().equals("/"));
     }
@@ -97,6 +100,7 @@ public class SiteNavigationPage {
         WebElement link = wait.until(ExpectedConditions.elementToBeClickable(socialLink));
         String target = link.getAttribute("target");
         String href = link.getAttribute("href");
+        // Validate the anchor contract before clicking, then verify the actual new browsing context.
         if (!"_blank".equals(target)) {
             throw new AssertionError(accessibleName + " should open in a new tab; target was " + target);
         }
@@ -111,6 +115,7 @@ public class SiteNavigationPage {
                 .findFirst().orElseThrow(() -> new AssertionError("Social link did not open a new tab"));
         driver.switchTo().window(newHandle);
         wait.until(d -> !"about:blank".equals(d.getCurrentUrl()));
+        // Social sites can redirect internally; compare destination hosts rather than full tracking URLs.
         String actualHost = URI.create(driver.getCurrentUrl()).getHost();
         String expectedHost = URI.create(expectedUrl).getHost();
         if (actualHost == null || !actualHost.toLowerCase().contains(expectedHost.toLowerCase())) {
@@ -124,6 +129,7 @@ public class SiteNavigationPage {
         lastAction = "Navigate to " + expectedPath;
         expectedUrl = siteRoot + normalizePath(expectedPath);
         Allure.parameter("Expected full URL", expectedUrl);
+        // Some responsive menus render duplicate links; interact with the visible instance only.
         WebElement link = wait.until(d -> d.findElements(locator).stream()
                 .filter(WebElement::isDisplayed)
                 .findFirst()
@@ -136,6 +142,7 @@ public class SiteNavigationPage {
 
     public void attachNavigationEvidence() {
         if (driver == null) return;
+        // Attach evidence during teardown so it is available for both passing and failing test cases.
         String actualUrl = driver.getCurrentUrl();
         String details = "Action: " + lastAction + "\nExpected full URL: " + expectedUrl
                 + "\nActual full URL: " + actualUrl;
@@ -153,10 +160,12 @@ public class SiteNavigationPage {
     }
 
     private String currentPath() {
+        // Compare path only: query strings and URL fragments are outside these navigation assertions.
         return normalizePath(URI.create(driver.getCurrentUrl()).getPath());
     }
 
     private static String normalizePath(String path) {
+        // Treat /route and /route/ as equivalent; the home route is always represented by a single slash.
         if (path == null || path.isBlank()) return "/";
         String normalized = path.replaceAll("/+$", "");
         return normalized.isEmpty() ? "/" : normalized;

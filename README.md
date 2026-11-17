@@ -2,6 +2,19 @@
 
 Java 17, Selenium, JUnit 5, and Allure tests for the Innovatiview website.
 
+## How the project is organized
+
+- `pages/` contains Page Objects: Selenium selectors and browser actions for the contact form and site navigation.
+- `tests/` contains JUnit 5 scenarios and expected outcomes; parameterized tests reuse one scenario across multiple input values or routes.
+- `utils/DriverFactory.java` creates a consistently configured Chrome session for each test.
+- `src/test/resources/allure.properties` selects where the Allure JUnit adapter writes raw results.
+- `.github/workflows/daily-qa-report.yml` runs the suite, builds and publishes an Allure report, retains a ZIP artifact, and emails the report link.
+- `pom.xml` sets Java/dependency versions and configures Surefire and Allure Maven.
+
+The tests use explicit Selenium waits, a fresh browser per test, and Allure text/screenshot attachments to make failures easier to diagnose. The contact suite checks required fields, malformed email and phone input, manipulated inquiry type, repeated submission, and input cases where no business rule is specified. The navigation suite covers desktop header links, a mobile menu, mega menus, footer routes, and social links that open new tabs.
+
+For an interview explanation: the test class states *what* behavior is expected, the Page Object encapsulates *how* the UI is located and operated, and the driver factory centralizes browser setup. GitHub Actions runs the same Maven suite in headless mode, then publishes the result artifacts even when assertions fail so the failure remains inspectable.
+
 ## Run locally
 
 ```bash

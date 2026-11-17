@@ -4,6 +4,7 @@
   <artifactId>contact-form-automation</artifactId>
   <version>1.0-SNAPSHOT</version>
   <properties>
+    <!-- Centralize versions and Java level so dependency upgrades are made in one place. -->
     <maven.compiler.release>17</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <selenium.version>4.27.0</selenium.version>
@@ -12,6 +13,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
   </properties>
   <dependencies>
+    <!-- Selenium drives Chrome; JUnit and Allure are test-scoped because this repository is a test suite. -->
     <dependency>
       <groupId>org.seleniumhq.selenium</groupId>
       <artifactId>selenium-java</artifactId>
@@ -32,6 +34,7 @@
   </dependencies>
   <build>
     <plugins>
+      <!-- Allure Maven reads JUnit adapter results and creates the static HTML report used by CI. -->
       <plugin>
         <groupId>io.qameta.allure</groupId>
         <artifactId>allure-maven</artifactId>
@@ -46,6 +49,7 @@
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.5.2</version>
         <configuration>
+          <!-- Disable JPMS module-path execution for predictable classpath-based test discovery. -->
           <useModulePath>false</useModulePath>
           <systemPropertyVariables>
             <junit.jupiter.extensions.autodetection.enabled>true</junit.jupiter.extensions.autodetection.enabled>
