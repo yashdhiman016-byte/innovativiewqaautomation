@@ -1,5 +1,6 @@
 name: Daily Innovatiview QA report
 
+# Run at 09:00 India time each day; workflow_dispatch also enables an on-demand run from the Actions UI.
 on:
   schedule:
     - cron: '0 9 * * *'
@@ -7,8 +8,10 @@ on:
   workflow_dispatch:
 
 permissions:
+  # Default to read-only; the job grants only the extra permissions needed to publish Pages.
   contents: read
 
+# Avoid overlapping deployments to the same Pages site; queued runs are allowed to finish.
 concurrency:
   group: innovatiview-qa-pages
   cancel-in-progress: false
@@ -16,6 +19,7 @@ concurrency:
 jobs:
   test-report-and-email:
     runs-on: ubuntu-latest
+    # Prevent a hung external-site test or email/report command from consuming a runner indefinitely.
     timeout-minutes: 45
     permissions:
       contents: read
@@ -41,6 +45,7 @@ jobs:
 
       - name: Run Selenium tests
         id: tests
+        # Preserve execution so the report/email can still explain a test failure; a final step restores failure status.
         continue-on-error: true
         env:
           SITE_URL: ${{ vars.SITE_URL || 'https://www.innovatiview.com' }}
@@ -53,6 +58,7 @@ jobs:
 
       - name: Validate email configuration
         id: email_config
+        # Validate secret presence without printing secret values; still run after test failures.
         if: always()
         env:
           GMAIL_FROM: ${{ secrets.GMAIL_FROM }}
@@ -70,6 +76,7 @@ jobs:
 
       - name: Generate static Allure report and ZIP
         id: report
+        # Generate evidence even when tests fail; later steps gate publishing and email on report success.
         if: always()
         run: |
           mvn --batch-mode io.qameta.allure:allure-maven:2.15.0:report
@@ -79,6 +86,7 @@ jobs:
           (cd public && zip -qr ../target/allure-report.zip .)
 
       - name: Upload downloadable Allure report
+        # Keep a versioned downloadable copy separate from the Pages deployment (retained for 14 days).
         if: always() && steps.report.outcome == 'success'
         uses: actions/upload-artifact@v7
         with:
@@ -88,6 +96,7 @@ jobs:
           retention-days: 14
 
       - name: Upload report for GitHub Pages
+        # Pages consumes an artifact produced by this action before the deploy step publishes it.
         if: always() && steps.report.outcome == 'success'
         uses: actions/upload-pages-artifact@v5
         with:
@@ -99,6 +108,7 @@ jobs:
         uses: actions/deploy-pages@v5
 
       - name: Email pass/fail report
+        # Email only when the report exists and all required credentials were validated.
         if: always() && steps.report.outcome == 'success' && steps.email_config.outcome == 'success'
         uses: dawidd6/action-send-mail@v24
         with:
@@ -120,4 +130,9 @@ jobs:
 
       - name: Mark workflow failed if email configuration is missing
         if: always() && steps.email_config.outcome == 'failure'
+        run: exit 1
+
+      # continue-on-error above is only for preserving diagnostics; return the test's failure to GitHub at job end.
+      - name: Mark workflow failed if tests failed
+        if: always() && steps.tests.outcome == 'failure'
         run: exit 1
